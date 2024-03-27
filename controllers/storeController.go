@@ -3,9 +3,11 @@ package main
 import (
 	"fmt"
 	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 	"net/http"
 	"os"
 	"storeApiRest/models"
+	"storeApiRest/repositories"
 	"storeApiRest/services"
 	"strconv"
 )
@@ -16,7 +18,12 @@ func main() {
 		port = "8080"
 	}
 	e := echo.New()
+	e.Use(middleware.LoggerWithConfig(middleware.LoggerConfig{
+		Format: "[method=${method}, host=${host}, uri=${uri}, status=${status}]\n",
+	}))
+	e.POST("/login", login)
 	s := e.Group("/api")
+	s.Use(middleware.JWT(repositories.JwtKey))
 	s.GET("/users", getUsers)
 	s.POST("/users", postUser)
 	s.PUT("/users", putUser)
@@ -26,6 +33,25 @@ func main() {
 	s.GET("/orders", getOrders)
 	s.POST("/orders", postOrder)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("localhost:%s", port)))
+}
+
+func login(c echo.Context) error {
+	var credentials struct {
+		Email    string `json:"email"`
+		Password string `json:"password"`
+	}
+	if err := c.Bind(&credentials); err != nil {
+		return err
+	}
+	authResponse, err := services.AuthenticateUserService(credentials.Email, credentials.Password)
+	if err != nil {
+		if err.Error() == "invalid credentials" {
+			return c.String(http.StatusBadRequest, "invalid credentials")
+		} else {
+			return err
+		}
+	}
+	return c.JSON(http.StatusOK, authResponse)
 }
 
 func getUsers(c echo.Context) error {

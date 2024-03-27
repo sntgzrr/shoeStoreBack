@@ -8,9 +8,9 @@ import (
 
 func CreateOrder(order models.Order) error {
 	queryOrder := `INSERT INTO orders(user_id, order_address)
-				VALUES ($1, $2)`
+					VALUES ($1, $2)`
 	queryOrderProduct := `INSERT INTO order_products(order_id, product_id)
-				VALUES ($1, $2)`
+							VALUES ($1, $2)`
 	db := database.GetConnection()
 	defer db.Close()
 
@@ -57,42 +57,22 @@ func ReadOrders() (models.Orders, error) {
 					JOIN products p ON op.product_id = p.product_id`
 	db := database.GetConnection()
 	defer db.Close()
-	rows, err := db.Query(query)
+	var order models.Order
+	var user models.User
+	var product models.Product
+	if err := db.QueryRow(query).Scan(&order.OrderID, &order.OrderAddress, &order.OrderCreatedAt,
+		&user.UserID, &user.UserFullName, &user.UserEmail, &user.UserCreatedAt, &user.UserUpdatedAt,
+		&product.ProductID, &product.ProductName, &product.ProductPrice, &product.ProductAmount, &product.ProductCreatedAt, &product.ProductUpdatedAt,
+	); err != nil {
+		return nil, err
+	}
+	order.UserID = user
+	products, err := ReadProductsByOrderID(order.OrderID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var order models.Order
-		var user models.User
-		var product models.Product
-		err := rows.Scan(
-			&order.OrderID,
-			&order.OrderAddress,
-			&order.OrderCreatedAt,
-			&user.UserID,
-			&user.UserFullName,
-			&user.UserEmail,
-			&user.UserCreatedAt,
-			&user.UserUpdatedAt,
-			&product.ProductID,
-			&product.ProductName,
-			&product.ProductPrice,
-			&product.ProductAmount,
-			&product.ProductCreatedAt,
-			&product.ProductUpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		order.UserID = user
-		products, err := ReadProductsByOrderID(order.OrderID)
-		if err != nil {
-			return nil, err
-		}
-		order.Products = products
-		orders = append(orders, &order)
-	}
+	order.Products = products
+	orders = append(orders, &order)
 	return orders, nil
 }
 
@@ -101,28 +81,13 @@ func ReadProductsByOrderID(orderID int) (models.Products, error) {
 	query := `SELECT p.product_id, p.product_name, p.product_price, p.product_amount, p.product_created_at, p.product_updated_at
 				FROM products p
 					JOIN order_products op ON p.product_id = op.product_id
-				WHERE op.order_id = $1`
+						WHERE op.order_id = $1`
 	db := database.GetConnection()
 	defer db.Close()
-	rows, err := db.Query(query, orderID)
-	if err != nil {
+	var product models.Product
+	if err := db.QueryRow(query, orderID).Scan(&product.ProductID, &product.ProductName, &product.ProductPrice, &product.ProductAmount, &product.ProductCreatedAt, &product.ProductUpdatedAt); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var product models.Product
-		err := rows.Scan(
-			&product.ProductID,
-			&product.ProductName,
-			&product.ProductPrice,
-			&product.ProductAmount,
-			&product.ProductCreatedAt,
-			&product.ProductUpdatedAt,
-		)
-		if err != nil {
-			return nil, err
-		}
-		products = append(products, &product)
-	}
+	products = append(products, &product)
 	return products, nil
 }

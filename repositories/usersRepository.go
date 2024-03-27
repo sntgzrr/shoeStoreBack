@@ -33,23 +33,11 @@ func ReadUsers() (models.Users, error) {
 				FROM users`
 	db := database.GetConnection()
 	defer db.Close()
-	rows, err := db.Query(query)
-	if err != nil {
+	var user models.User
+	if err := db.QueryRow(query).Scan(&user.UserID, &user.UserFullName, &user.UserEmail, &user.UserPassword, &user.UserCreatedAt, &user.UserUpdatedAt); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var user models.User
-		rows.Scan(
-			&user.UserID,
-			&user.UserFullName,
-			&user.UserEmail,
-			&user.UserPassword,
-			&user.UserCreatedAt,
-			&user.UserUpdatedAt,
-		)
-		users = append(users, &user)
-	}
+	users = append(users, &user)
 	return users, nil
 }
 

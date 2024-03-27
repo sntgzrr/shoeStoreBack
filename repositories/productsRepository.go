@@ -33,22 +33,11 @@ func ReadProducts() (models.Products, error) {
 				FROM products`
 	db := database.GetConnection()
 	defer db.Close()
-	rows, err := db.Query(query)
-	if err != nil {
+	var product models.Product
+	if err := db.QueryRow(query).Scan(&product.ProductID, &product.ProductName, &product.ProductPrice, &product.ProductCreatedAt, &product.ProductUpdatedAt); err != nil {
 		return nil, err
 	}
-	defer rows.Close()
-	for rows.Next() {
-		var product models.Product
-		rows.Scan(
-			&product.ProductID,
-			&product.ProductName,
-			&product.ProductPrice,
-			&product.ProductCreatedAt,
-			&product.ProductUpdatedAt,
-		)
-		products = append(products, &product)
-	}
+	products = append(products, &product)
 	return products, nil
 }
 

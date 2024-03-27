@@ -23,6 +23,8 @@ func main() {
 	s.GET("/products", getProducts)
 	s.POST("/products", postProduct)
 	s.PUT("/products", putProduct)
+	s.GET("/orders", getOrders)
+	s.POST("/orders", postOrder)
 	e.Logger.Fatal(e.Start(fmt.Sprintf("localhost:%s", port)))
 }
 
@@ -95,4 +97,23 @@ func putProduct(c echo.Context) error {
 		return err
 	}
 	return c.String(http.StatusOK, "Product updated successfully")
+}
+
+func getOrders(c echo.Context) error {
+	orders, err := services.ReadOrdersService()
+	if err != nil {
+		return err
+	}
+	return c.JSON(http.StatusOK, orders)
+}
+
+func postOrder(c echo.Context) error {
+	var order models.Order
+	if err := c.Bind(&order); err != nil {
+		return err
+	}
+	if err := services.CreateOrderService(order); err != nil {
+		return err
+	}
+	return c.String(http.StatusCreated, "Order created successfully")
 }

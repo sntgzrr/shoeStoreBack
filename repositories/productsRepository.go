@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"database/sql"
 	"errors"
 	"storeApiRest/database"
 	"storeApiRest/models"
@@ -29,15 +30,27 @@ func CreateProduct(product models.Product) error {
 
 func ReadProducts() (models.Products, error) {
 	var products models.Products
+	updatedAtNull := sql.NullTime{}
 	query := `SELECT product_id, product_name, product_price, product_created_at, product_updated_at
 				FROM products`
 	db := database.GetConnection()
 	defer db.Close()
-	var product models.Product
-	if err := db.QueryRow(query).Scan(&product.ProductID, &product.ProductName, &product.ProductPrice, &product.ProductCreatedAt, &product.ProductUpdatedAt); err != nil {
+	rows, err := db.Query(query)
+	if err != nil {
 		return nil, err
 	}
-	products = append(products, &product)
+	defer rows.Close()
+	for rows.Next() {
+		var product models.Product
+		err := rows.Scan(
+			&product.ProductID, &product.ProductName, &product.ProductPrice, &product.ProductCreatedAt, &updatedAtNull,
+		)
+		if err != nil {
+			return nil, err
+		}
+		product.ProductUpdatedAt = updatedAtNull.Time
+		products = append(products, &product)
+	}
 	return products, nil
 }
 

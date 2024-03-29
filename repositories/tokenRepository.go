@@ -25,7 +25,7 @@ func AuthenticateUser(email, password string) (*models.AuthResponse, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	claims["email"] = email
-	claims["exp"] = time.Now().Add(time.Minute * 10).Unix()
+	claims["exp"] = time.Now().Add(time.Hour * 10).Unix()
 	tokenString, err := token.SignedString(JwtKey)
 	if err != nil {
 		return nil, err

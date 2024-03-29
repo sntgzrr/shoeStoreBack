@@ -1,6 +1,7 @@
 package repositories
 
 import (
+	"database/sql"
 	"errors"
 	"storeApiRest/database"
 	"storeApiRest/models"
@@ -29,15 +30,27 @@ func CreateUser(user models.User) error {
 
 func ReadUsers() (models.Users, error) {
 	var users models.Users
+	updatedAtNull := sql.NullTime{}
 	query := `SELECT user_id, user_full_name, user_email, user_password, user_created_at, user_updated_at
 				FROM users`
 	db := database.GetConnection()
 	defer db.Close()
-	var user models.User
-	if err := db.QueryRow(query).Scan(&user.UserID, &user.UserFullName, &user.UserEmail, &user.UserPassword, &user.UserCreatedAt, &user.UserUpdatedAt); err != nil {
+	rows, err := db.Query(query)
+	if err != nil {
 		return nil, err
 	}
-	users = append(users, &user)
+	defer rows.Close()
+	for rows.Next() {
+		var user models.User
+		err := rows.Scan(
+			&user.UserID, &user.UserFullName, &user.UserEmail, &user.UserPassword, &user.UserCreatedAt, &updatedAtNull,
+		)
+		if err != nil {
+			return nil, err
+		}
+		user.UserUpdatedAt = updatedAtNull.Time
+		users = append(users, &user)
+	}
 	return users, nil
 }
 
